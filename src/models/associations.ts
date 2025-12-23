@@ -2,6 +2,7 @@ import User from './User.js';
 import Note from './Note.js';
 import NoteVersion from './NoteVersion.js';
 import NoteShare from './NoteShare.js';
+import NoteMedia from './NoteMedia.js';
 
 // User <-> Note
 User.hasMany(Note, {
@@ -47,9 +48,20 @@ NoteShare.belongsTo(User, {
   as: 'user',
 });
 
+Note.hasMany(NoteMedia, {
+  foreignKey: 'noteId',
+  as: 'media',
+});
+
+NoteMedia.belongsTo(Note, {
+  foreignKey: 'noteId',
+});
+
+
 export default {
   User,
   Note,
   NoteVersion,
   NoteShare,
+  NoteMedia
 };

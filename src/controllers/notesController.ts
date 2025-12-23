@@ -7,6 +7,8 @@ import versionService from '../services/versionService.js';
 import cacheService from '../services/cacheService.js';
 import { getNoteWithAccess } from '../services/noteAccessService.js';
 import { sendError, sendSuccess } from '../utils/helper.js';
+import { MAX_MEDIA_SIZE } from '../middlewares/mediaUpload.js';
+import NoteMedia from '../models/NoteMedia.js';
 
 // ==================== CREATE NOTE ====================
 export const createNote = async (req: AuthenticatedRequest, res: Response) => {
@@ -14,10 +16,22 @@ export const createNote = async (req: AuthenticatedRequest, res: Response) => {
 
     try {
         const { title, content } = req.body;
+        const file = req.file;
         const userId = req.user?.id;
 
         if (!userId) return sendError(res, 401, 'You must be logged in to create a note.');
         if (!title || !content) return sendError(res, 400, 'Title and content cannot be empty.');
+
+        // Media validation
+        if (file) {
+            if (file.size > MAX_MEDIA_SIZE) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: 'Media file must be 5MB or smaller',
+                });
+            }
+        }
 
         const newNote = await Note.create({
             title: title.trim(),
@@ -35,6 +49,19 @@ export const createNote = async (req: AuthenticatedRequest, res: Response) => {
             userId,
             transaction
         );
+
+        if (file) {
+            await NoteMedia.create(
+                {
+                    noteId: newNote.id,
+                    filename: file.originalname,
+                    mimeType: file.mimetype,
+                    size: file.size,
+                    data: file.buffer,
+                },
+                { transaction }
+            );
+        }
 
         await transaction.commit();
 
@@ -92,7 +119,24 @@ export const getNoteById = async (req: AuthenticatedRequest, res: Response) => {
         const access = await getNoteWithAccess(Number(id), userId);
         if (!access) return sendError(res, 404, 'Note not found or access denied.');
 
-        return sendSuccess(res, 200, 'Note retrieved successfully.', access.note);
+        const noteWithMedia = await Note.findByPk(Number(id), {
+            include: [
+                {
+                    model: NoteMedia,
+                    as: 'media',
+                    attributes: ['id', 'filename', 'mimeType', 'size', 'createdAt'],
+                },
+            ],
+        });
+
+        if (!noteWithMedia) {
+            return sendError(res, 404, 'Note not found.');
+        }
+
+        return sendSuccess(res, 200, 'Note retrieved successfully.', {
+            ...noteWithMedia.toJSON(),
+            permission: access.permission,
+        });
     } catch (err: any) {
         console.error('[Notes][GetById] Error:', err);
         return sendError(res, 500, 'Failed to retrieve note.');
@@ -107,6 +151,7 @@ export const updateNote = async (req: AuthenticatedRequest, res: Response) => {
         const { id } = req.params;
         const { title, content, version } = req.body;
         const userId = req.user?.id;
+        const file = req.file;
 
         if (!userId) return sendError(res, 401, 'Authentication required.');
         if (!title && !content) return sendError(res, 400, 'Title or content must be provided.');
@@ -115,6 +160,13 @@ export const updateNote = async (req: AuthenticatedRequest, res: Response) => {
         const access = await getNoteWithAccess(Number(id), userId);
         if (!access) return sendError(res, 404, 'Note not found or access denied.');
         if (access.permission === 'READ') return sendError(res, 403, 'You have read-only access to this note.');
+        if (file && file.size > MAX_MEDIA_SIZE) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Media file must be 5MB or smaller',
+            });
+        }
 
         const note = await Note.findOne({
             where: { id },
@@ -159,6 +211,19 @@ export const updateNote = async (req: AuthenticatedRequest, res: Response) => {
             userId,
             transaction
         );
+
+        if (file) {
+            await NoteMedia.create(
+                {
+                    noteId: note.id,
+                    filename: file.originalname,
+                    mimeType: file.mimetype,
+                    size: file.size,
+                    data: file.buffer,
+                },
+                { transaction }
+            );
+        }
 
         await transaction.commit();
 

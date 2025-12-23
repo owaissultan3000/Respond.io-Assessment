@@ -18,13 +18,14 @@ import {
   searchCacheKey,
   noteVersionsCacheKey 
 } from '../middlewares/cache.js';
+import { mediaUpload } from '../middlewares/mediaUpload.js';
 
 const router = express.Router();
 
 router.use(authenticate);
 
 // Create and delete don't use cache
-router.post('/', createNote);
+router.post('/', mediaUpload.single('media'), createNote);
 router.delete('/:id', deleteNote);
 
 // These routes use caching
@@ -34,7 +35,7 @@ router.get('/:id', cacheMiddleware(noteCacheKey, 600), getNoteById); // 10 min c
 router.get('/:id/versions', cacheMiddleware(noteVersionsCacheKey, 1800), getNoteVersions); // 30 min cache
 
 // Update and revert invalidate cache automatically
-router.put('/:id', updateNote);
+router.put('/:id', mediaUpload.single('media'), updateNote);
 router.post('/revert', revertToVersion);
 
 // share note with others
