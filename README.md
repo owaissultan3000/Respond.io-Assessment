@@ -4,24 +4,27 @@ A RESTful API for managing notes with version control, concurrency handling, and
 
 ## Features
 
-- **User Authentication**: Secure registration and login with JWT tokens
-- **Note Management**: Create, read, update, and delete notes
-- **Version Control**: Track all changes to notes and revert to previous versions
-- **Concurrency Control**: Optimistic locking prevents conflicting updates
-- **Full-Text Search**: Fast search using MySQL full-text indexing
-- **Redis Caching**: Improved performance for frequently accessed data
-- **Soft Deletes**: Notes are marked as deleted but preserved in database
-- **Refresh Tokens**: Long-lived sessions with token refresh mechanism
+- User authentication with JWT access and refresh tokens
+- Create, read, update, and delete notes
+- Share notes with other users using read-only or edit permissions
+- Attach images and videos to notes (stored in database, max 5MB per file)
+- Version control with full history and revert functionality
+- Optimistic locking to prevent concurrent update conflicts
+- Full-text search using MySQL indexing
+- Redis caching for frequently accessed data
+- Soft delete support for notes
+- Secure session handling using refresh tokens
 
 ## Tech Stack
 
-- **Runtime**: Node.js with TypeScript
-- **Framework**: Express.js
-- **Database**: MySQL 8.0 with Sequelize ORM
-- **Cache**: Redis
-- **Authentication**: JWT (JSON Web Tokens)
-- **Password Hashing**: bcryptjs
-- **Containerization**: Docker & Docker Compose
+- Node.js with TypeScript
+- Express.js
+- MySQL 8.0 with Sequelize ORM
+- Redis
+- JWT (JSON Web Tokens)
+- bcryptjs
+- Multer (in-memory file uploads)
+- Docker & Docker Compose
 
 ## Prerequisites
 
@@ -370,6 +373,14 @@ curl -X PUT http://localhost:3000/api/notes/1 \
 ```bash
 curl -X GET http://localhost:3000/api/notes/1/versions \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+6. **Share a note with another user:**
+```bash
+curl -X POST http://localhost:3000/api/POST/api/notes/share \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  -d '{"noteId": 1,"userId": 2,"permission": "READ"}'
 ```
 
 ### Using Postman
