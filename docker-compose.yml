@@ -17,10 +17,12 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "notes_user", "-pnotes_password"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - notes-network
 
   redis:
     image: redis:7-alpine
@@ -36,13 +38,29 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    networks:
+      - notes-network
+
+  api:
+    build: .
+    container_name: notes-api
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - notes-network
 
 volumes:
   mysql_data:
-    driver: local
   redis_data:
-    driver: local
 
 networks:
-  default:
-    name: notes-network
+  notes-network:
+    driver: bridge

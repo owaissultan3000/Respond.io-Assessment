@@ -2,6 +2,7 @@ import app from './app.js';
 import env from './config/env.js';
 import database from './config/database.js';
 import redis from './config/redis.js';
+import './models/index.js';
 
 class Server {
   private isShuttingDown = false;
