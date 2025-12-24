@@ -445,8 +445,3 @@ curl -X PUT http://localhost:3000/api/notes/1 \
 - Full-text search is optimized with MySQL indexes
 - Use pagination for large result sets
 - Monitor cache hit rates in logs
-
-
-## Support
-
-For issues and questions, please open an issue in the repository.
